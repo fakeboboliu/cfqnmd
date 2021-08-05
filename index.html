@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Cloudflare Threat Score Test</title>
+</head>
+
+<body>
+    <h1>Cloudflare Threat Score Test</h1>
+    <p>测试你当前在 Cloudflare 的声誉 w/o tracker (and style)</p>
+    <p>Inspired &amp; effected by <a href='https://lab.skk.moe/cf-threat/'>https://lab.skk.moe/cf-threat/</a></p>
+    <br><br>
+    <div id="threat-score">正在测试中，大概需要 5 ~ 10 秒....</div>
+    <p>据 <a href='https://lab.skk.moe/cf-threat/'>skk</a> 说：0 表示 Cloudflare 判定为低风险，高于 10 代表 Cloudflare 判定为爬虫或者垃圾邮件发送者，高于
+        40 则代表 Cloudflare 判定为有严重不良行为的 IP（如僵尸网络等）。这个数值一般不会大于 60。</p>
+    <h3>Request Trace</h3>
+    <div id="request-info"></div>
+    <h3>Use in Terminal</h3>
+    <p><code style="user-select: all">curl -o- https://cf.qn.md/test.sh | bash</code></p>
+    </section>
+    <script>
+        fetch('https://cf.qn.md/cdn-cgi/trace').then((resp) => resp.text().then(data => {
+            let displays = [];
+            for (let i of data.split('\n')) {
+                let x = i.split('=');
+                if (x[0] != '') displays.push(`<p><strong>${x[0]}:</strong> ${x[1]}</p>`);
+            }
+            document.getElementById('request-info').innerHTML = displays.join("");
+        }))
+
+        const runcheck = (level) => new Promise((resolve, reject) => {
+            console.log(level);
+            fetch(`https://cf.qn.md/t.txt?t=${level}&${+(new Date)}`).then((resp) => {
+                if (!resp.ok) {
+                    resolve(level);
+                } else resolve();
+            }).catch(() => { resolve(); })
+        });
+
+        const promises = [];
+        for (const i of Array(100).keys()) {
+            promises.push(runcheck(i));
+        }
+
+        Promise.all(promises).then(fullfills => {
+            const score = fullfills.filter(n => n !== undefined)[0];
+
+            let color = '';
+            if (score < 5) {
+                color = 'green'
+            } else if (score < 20) {
+                color = 'yellow'
+            } else if (score <= 100) {
+                color = 'red'
+            }
+            document.getElementById('threat-score').innerHTML = `你当前在 Cloudflare 的威胁指数是: <span style="font-size: xxx-large; color: ${color};">${score}</span>`;
+        });
+    </script>
+</body>
+
+</html>
