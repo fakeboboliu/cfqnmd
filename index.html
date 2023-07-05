@@ -30,23 +30,22 @@
             document.getElementById('request-info').innerHTML = displays.join("");
         }))
 
-        const runcheck = (level) => new Promise((resolve, reject) => {
+        const runcheck = (level, max) => new Promise((resolve, reject) => {
             console.log(level);
-            fetch(`https://cf.qn.md/t.txt?t=${level}&${+(new Date)}`).then((resp) => {
+            if (level == max) {
+                reject(level);
+            }
+            fetch(`https://cf.qn.md/t.txt?t=${level}&${+(new Date)}`).catch(() => { reject(50); })
+            .then((resp) => {
                 if (!resp.ok) {
-                    resolve(level);
-                } else resolve();
-            }).catch(() => { resolve(); })
+                    reject(level);
+                } else { runcheck(level+1, max).catch(v => { reject(v) }) };
+            })
         });
 
-        const promises = [];
-        for (const i of Array(100).keys()) {
-            promises.push(runcheck(i));
-        }
-
-        Promise.all(promises).then(fullfills => {
-            const score = fullfills.filter(n => n !== undefined)[0];
-
+        runcheck(0, 50).then(() => {
+            document.getElementById('threat-score').innerHTML = `测试失败`;
+        }).catch(score => {
             let color = '';
             if (score < 5) {
                 color = 'green'
@@ -54,6 +53,9 @@
                 color = 'yellow'
             } else if (score <= 100) {
                 color = 'red'
+            }
+            if (score >= 49) {
+                score = '>49'
             }
             document.getElementById('threat-score').innerHTML = `你当前在 Cloudflare 的威胁指数是: <span style="font-size: xxx-large; color: ${color};">${score}</span>`;
         });
